@@ -161,10 +161,10 @@ going to `zernio.com` and never to the upload host, and asking which account
 before anything is uploaded.
 
 Run for real: the draft tool with our config against the real writer, image
-model and AI Gateway. Not yet run against Zernio itself, or from Slack through
-the deployed agent.
+model and AI Gateway, and posts drafted in Slack, approved in the form and
+published to our own Instagram through the deployed agent and Zernio.
 
-Not built yet: carousels, Reels and Stories. Zernio's API has them.
+Not built yet: Reels and Stories. Zernio's API has them.
 
 ## About this repo
 
