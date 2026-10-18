@@ -9,7 +9,7 @@ import { Port, type Manifest } from '../../kernel/port'
 export type SlackInput =
   | 'plain_text_input' | 'number_input' | 'email_text_input' | 'url_text_input'
   | 'datepicker' | 'timepicker' | 'static_select' | 'checkboxes' | 'users_select' | 'conversations_select'
-  /** Ours, not Slack's: a pick of the images attached in the conversation. */
+  /** Ours, not Slack's: a pick of the images attached in the conversation, or a photo uploaded in the app. */
   | 'image_select'
   /** Ours, not Slack's: a pick of the text files attached in the conversation. */
   | 'document_select'
@@ -48,6 +48,11 @@ export const filesOfKind = (files: FileRef[], kind: 'image' | 'document') => fil
 export interface FileData { id: string; name: string; mimetype: string; bytes: Uint8Array }
 
 const SLACK_FILE_ID = /^F[A-Z0-9]{6,}$/
+/**
+ * An image's id: a Slack file id (F0123ABCD), or, in the app, the SHA-256 of
+ * the upload's bytes as base64url, so a passkey that signs the call signs the photo too.
+ */
+export const IMAGE_ID = /^(?:F[A-Z0-9]{6,}|[A-Za-z0-9_-]{43})$/
 const DATA_IMAGE = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+=*$/
 const httpsUrl = z.url({ protocol: /^https$/ })
 
@@ -80,10 +85,11 @@ export const ui = {
   user: (label: string, o?: FieldOptions) => hint(z.string().regex(/^[UW][A-Z0-9]{2,}$/), { element: 'users_select', label }, o),
   conversation: (label: string, o?: FieldOptions) => hint(z.string().regex(/^[CGD][A-Z0-9]{2,}$/), { element: 'conversations_select', label }, o),
   /**
-   * An image someone attached in this conversation. The value is its Slack file
-   * id; read it with `ctx.file(id)`. In a form it's a pick of the attached images.
+   * An image: in Slack, one attached in this conversation (a pick of them in a
+   * form); in the app, a photo taken or chosen in the form. Read it with
+   * `ctx.file(id)`, which only reaches images the caller allows.
    */
-  image: (label: string, o?: FieldOptions) => hint(z.string().regex(SLACK_FILE_ID), { element: 'image_select', label }, o),
+  image: (label: string, o?: FieldOptions) => hint(z.string().regex(IMAGE_ID), { element: 'image_select', label }, o),
   /**
    * A text file someone attached in this conversation (Markdown, plain text,
    * CSV, JSON). The value is its Slack file id; read it with `ctx.file(id)` and
@@ -142,7 +148,7 @@ export interface CallContext {
   fetch(url: string, init?: RequestInit & { credential?: string }): Promise<Response>
   /** Answers to this call's follow-up questions so far, in the order they were asked. */
   answers?: ElicitAnswer[]
-  /** A file attached or made in this conversation, by id. Anything else is refused. */
+  /** A file this call may read, by id: attached or made in this conversation (Slack) or uploaded by this person (the app). Anything else is refused. */
   file?(id: string): Promise<FileData>
   /**
    * Whether the person asking holds a permission, e.g. `ctx.can?.('see:prices')`,
@@ -160,7 +166,7 @@ export interface Elicitation { message: string; schema: JsonSchema }
 
 /** What a tool's `run` gets. */
 export interface ToolContext extends Omit<CallContext, 'answers' | 'file'> {
-  /** Reads a file attached or made in this conversation (a `ui.image` or `ui.document` value). */
+  /** Reads a file this call may read (a `ui.image` or `ui.document` value). */
   file(id: string): Promise<FileData>
   /**
    * Asks the person something partway through. The call stops here, the

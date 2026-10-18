@@ -15,7 +15,7 @@ export {
 
 // Writing tools
 export {
-  ui, out, tool, LocalToolServer, ToolServer, ElicitationNeeded, needsAnswer, toJsonSchema, NAME, IMAGE_TYPES, MAX_IMAGE_BYTES, isImage, filesOfKind, fileIds, FILE_ELEMENTS,
+  ui, out, tool, LocalToolServer, ToolServer, ElicitationNeeded, needsAnswer, toJsonSchema, NAME, IMAGE_ID, IMAGE_TYPES, MAX_IMAGE_BYTES, isImage, filesOfKind, fileIds, FILE_ELEMENTS,
   type FileRef, type FileData,
   type ToolDef, type ToolContext, type CallContext, type ToolResult, type ToolSpec, type ToolAnnotations,
   type ElicitAnswer, type ElicitResult, type Elicitation, type JsonSchema, type JsonSchemaProp, type SlackHint, type FieldOptions,

@@ -40,14 +40,6 @@ const fromBase64 = (b64: string) => {
   return bytes
 }
 
-/** FLUX.2 on Workers AI takes its inputs as a multipart form, passed as a stream and its content type. */
-async function multipart(fields: Record<string, string | number>) {
-  const form = new FormData()
-  for (const [k, v] of Object.entries(fields)) form.append(k, String(v))
-  const r = new Response(form)
-  return { multipart: { body: r.body, contentType: r.headers.get('content-type') } }
-}
-
 /** What the bytes are, from their first few, so the type is never taken on trust. */
 export function sniffImage(bytes: Uint8Array): GeneratedImage['mimetype'] | undefined {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg'
@@ -61,12 +53,12 @@ export function sniffImage(bytes: Uint8Array): GeneratedImage['mimetype'] | unde
  * and costs about $0.025 for a 1024x768 picture (three 512x512 tiles at
  * $0.006996 plus its steps, Workers AI's pricing page, October 2026).
  *
- * FLUX.2 [klein] 9B draws as well, faster and cheaper, but it takes its input
- * as a multipart stream, which AI Gateway refuses ("AI Gateway does not support
- * ReadableStreams yet", October 2026). So FLUX.2 calls go to Workers AI
- * directly, still metered here but not seen by the gateway. FLUX.1 schnell is
- * the cheap one, about $0.00065, but it ignores most of a style description.
- * All of them answer `{ image: base64 }`.
+ * Every call goes through AI Gateway. FLUX.2 [klein] 9B draws as well, faster
+ * and cheaper, but it takes its input as a multipart stream, which AI Gateway
+ * refuses ("AI Gateway does not support ReadableStreams yet", October 2026), so
+ * FLUX.2 models are refused here rather than sent around the gateway. FLUX.1
+ * schnell is the cheap one, about $0.00065, but it ignores most of a style
+ * description. Both answer `{ image: base64 }`.
  */
 export class WorkersAiImageModel extends ImageModel {
   readonly #ai: Ai
@@ -80,6 +72,7 @@ export class WorkersAiImageModel extends ImageModel {
     super()
     this.#ai = opts.ai
     this.#model = opts.model ?? WorkersAiImageModel.DEFAULT_MODEL
+    if (this.#model.includes('/flux-2-')) throw new ValidationError(`${this.#model} can't go through AI Gateway, so it isn't used`)
     // FLUX.1 schnell is made for four steps; the others know their own best.
     this.#steps = opts.steps ?? (this.#model.includes('flux-1-schnell') ? 4 : undefined)
     this.#gateway = opts.gateway
@@ -90,11 +83,8 @@ export class WorkersAiImageModel extends ImageModel {
     if (!prompt) throw new ValidationError('An image needs a description')
     const fields: Record<string, string | number> = { prompt: prompt.slice(0, MAX_IMAGE_PROMPT) }
     if (req.width && req.height) Object.assign(fields, { width: req.width, height: req.height })
-    const flux2 = this.#model.includes('/flux-2-')
-    const gateway = this.#gateway && !flux2 ? { gateway: { id: this.#gateway.id, collectLog: this.#gateway.collectLog ?? false } } : undefined
-    const out = await this.#ai.run(this.#model as keyof AiModels, (flux2
-      ? await multipart(fields)
-      : { ...fields, ...(this.#steps ? { steps: this.#steps } : {}) }) as never, gateway) as { image?: unknown }
+    const gateway = this.#gateway ? { gateway: { id: this.#gateway.id, collectLog: this.#gateway.collectLog ?? false } } : undefined
+    const out = await this.#ai.run(this.#model as keyof AiModels, { ...fields, ...(this.#steps ? { steps: this.#steps } : {}) } as never, gateway) as { image?: unknown }
     if (typeof out?.image !== 'string' || !out.image) throw new UpstreamError('Workers AI', 200, `${this.#model} gave no image`)
     const bytes = fromBase64(out.image)
     const mimetype = sniffImage(bytes)

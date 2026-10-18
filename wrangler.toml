@@ -38,7 +38,7 @@ MAX_CAP_USD = "50"
 # What social__draft writes with. Unset, it's @cf/deepseek-ai/deepseek-v4-pro-0813 (about 1c a draft).
 # AI_WRITER_MODEL = "@cf/deepseek-ai/deepseek-v4-pro-0813"
 # What social__draft draws illustrations with. Unset, it's @cf/leonardo/lucid-origin (about 2.5c).
-# @cf/black-forest-labs/flux-2-klein-9b draws as well for less, but skips the AI Gateway (it refuses its input).
+# @cf/black-forest-labs/flux-2-klein-9b draws as well for less, but AI Gateway refuses its input, so it's refused.
 # AI_IMAGE_MODEL = "@cf/leonardo/lucid-origin"
 # Every AI call goes through the AI Gateway called "default", which Cloudflare creates on the
 # first request. Name another gateway here to use that instead.

@@ -13,9 +13,7 @@
     "db:local": "wrangler d1 execute social-media --local --config wrangler.toml --file capabilities/core/schema.sql",
     "db:remote": "wrangler d1 execute social-media --remote --config wrangler.toml --file capabilities/core/schema.sql",
     "typecheck": "tsc -p tsconfig.json",
-    "sync:capabilities": "node scripts/sync-capabilities.mjs",
-    "check:capabilities": "node scripts/sync-capabilities.mjs --check",
-    "test": "node scripts/sync-capabilities.mjs --check && vitest run",
+    "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {

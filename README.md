@@ -111,16 +111,15 @@ the key, and audits them like any other use.
 
 Every model call goes through the AI Gateway called `default`, which
 Cloudflare creates on the first request, with prompt logging off. Set
-`AI_GATEWAY_ID` to use another. The one exception: FLUX.2 image models, if you
-choose one with `AI_IMAGE_MODEL`, take a multipart stream that the gateway
-refuses, so those calls go straight to Workers AI (still counted against the
-monthly cap).
+`AI_GATEWAY_ID` to use another. FLUX.2 image models take a multipart stream
+that the gateway refuses, so naming one in `AI_IMAGE_MODEL` is refused rather
+than sent around the gateway.
 
 ## What it uses from capabilities
 
 `capabilities/` holds copies of the parts of our capabilities it uses, so it
-runs on its own. `capabilities/index.ts` says which parts, and
-`scripts/sync-capabilities.mjs` keeps the copies in step with ours. **Don't
+runs on its own. `capabilities/index.ts` says which parts, and the copies are kept in step
+with ours automatically. **Don't
 edit the copies**: they're overwritten from the source on every sync.
 
 - `capabilities/core/social`: the `SocialPublisher` port, `ZernioPublisher`, the card renderer and its fonts, and `socialTools`
