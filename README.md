@@ -1,6 +1,6 @@
 # Lab 005: Instagram posts from Slack
 
-The code behind our lab [Instagram Posts From Slack](https://plainfunction.com.au/labs/social-media).
+The code behind our lab [We Let AI Write Our Instagram Posts, Then Read Every One](https://plainfunction.com.au/labs/social-media).
 We drop one of our write-ups into Slack, or say what happened, and ask our
 Slack agent for an Instagram post. It writes the caption and draws the
 picture: a card in our colours with the point of the post on it in real type,
