@@ -1,0 +1,34 @@
+# Secrets for wrangler dev. Copy to .dev.vars (gitignored), or run
+# `npm run dev:secrets` to write .dev.vars with KEYRING and SIGNING_KEY made for you.
+# Deployed, each of these is a Worker secret: wrangler secret put <NAME> --config wrangler.toml
+
+# Slack member ids (profile, ⋮, Copy member ID), comma-separated. Nobody else gets an answer.
+ALLOWED_USERS=U0123ABCD
+# Who can change settings (say "settings" in a DM) and connect accounts. Must also be allowed.
+ADMIN_USERS=U0123ABCD
+# The workspace id (T…), from app.slack.com/client/<this>/ or auth.test. Empty skips the check.
+SLACK_TEAM_ID=T0123ABCD
+
+# From your Slack app: Basic Information → Signing Secret
+SLACK_SIGNING_SECRET=
+# From your Slack app: OAuth & Permissions → Bot User OAuth Token
+SLACK_BOT_TOKEN=xoxb-
+
+# Seals conversations, jobs and approvals. JSON, with a
+# key id so keys can be rotated later. 32 random bytes, base64:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# Keep a copy somewhere safe: a new keyring can't open what the old one sealed.
+KEYRING={"current":"k1","keys":{"k1":"<32 random bytes, base64>"}}
+
+# Signs the ref in each form's buttons. At least 32 random characters.
+SIGNING_KEY=
+
+# Only with OAUTH_PROVIDERS in wrangler.toml, one pair per provider:
+# OAUTH_GITHUB_CLIENT_ID=
+# OAUTH_GITHUB_CLIENT_SECRET=
+
+# A Zernio API key (sk_...), from Settings, API Keys in Zernio. Only ever sent to zernio.com.
+CREDENTIAL_ZERNIO=
+
+# Only to send traces somewhere other than Cloudflare's own:
+# OTEL_EXPORTER_OTLP_HEADERS=

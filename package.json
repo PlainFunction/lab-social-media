@@ -1,0 +1,33 @@
+{
+  "name": "lab-social-media",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lab 005: a Slack agent that drafts Instagram posts, picture included, and asks before they go, through Zernio.",
+  "imports": {
+    "#capabilities": "./capabilities/index.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.toml",
+    "dev:secrets": "node scripts/dev-secrets.mjs",
+    "db:local": "wrangler d1 execute social-media --local --config wrangler.toml --file capabilities/core/schema.sql",
+    "db:remote": "wrangler d1 execute social-media --remote --config wrangler.toml --file capabilities/core/schema.sql",
+    "typecheck": "tsc -p tsconfig.json",
+    "sync:capabilities": "node scripts/sync-capabilities.mjs",
+    "check:capabilities": "node scripts/sync-capabilities.mjs --check",
+    "test": "node scripts/sync-capabilities.mjs --check && vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@resvg/resvg-wasm": "2.6.2",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.18.6",
+    "@cloudflare/workers-types": "4.20260702.1",
+    "@types/node": "24.13.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.107.0"
+  }
+}

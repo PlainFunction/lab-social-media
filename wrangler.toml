@@ -1,0 +1,93 @@
+# One Worker per Slack workspace, with its own D1, KV, queue and secrets.
+# Fill in the ids, then see README.md for the Slack app and secrets.
+
+name = "social-media"
+main = "src/worker.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Slack posts to /slack/events and /slack/interactions on this Worker. Every
+# request is checked against the signing secret; nothing else answers.
+workers_dev = true
+preview_urls = false
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[triggers]
+# Hourly: expire unanswered forms and old OAuth links, forget conversations older than 30 days.
+crons = ["0 * * * *"]
+
+[vars]
+ASSISTANT_NAME = "Social"
+TIME_ZONE = "Australia/Sydney"
+# ALLOWED_USERS, ADMIN_USERS and SLACK_TEAM_ID are set as secrets (and in .dev.vars for
+# wrangler dev), so whose workspace this is stays out of git. See .dev.vars.example.
+# The defaults. Admins can change these in Slack; the cap never past MAX_CAP_USD.
+MONTHLY_CAP_USD = "5"
+MAX_CAP_USD = "50"
+# Unset, it's Workers AI's @cf/zai-org/glm-4.7-flash. Any other @cf/ model name works,
+# and "offline" tries everything without a model and costs nothing.
+# AI_MODEL = "offline"
+# What images__describe uses. Unset, it's @cf/mistralai/mistral-small-3.1-24b-instruct.
+# AI_VISION_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct"
+# What social__draft writes with. Unset, it's @cf/deepseek-ai/deepseek-v4-pro-0813 (about 1c a draft).
+# AI_WRITER_MODEL = "@cf/deepseek-ai/deepseek-v4-pro-0813"
+# What social__draft draws illustrations with. Unset, it's @cf/leonardo/lucid-origin (about 2.5c).
+# @cf/black-forest-labs/flux-2-klein-9b draws as well for less, but skips the AI Gateway (it refuses its input).
+# AI_IMAGE_MODEL = "@cf/leonardo/lucid-origin"
+# Every AI call goes through the AI Gateway called "default", which Cloudflare creates on the
+# first request. Name another gateway here to use that instead.
+# AI_GATEWAY_ID = "default"
+# Per tool, allow / ask / never. social__post changes things, so it asks unless set here.
+# Leave it asking: that form is where a person reads the post before it goes.
+# TOOL_POLICY = '{"social__post":"ask"}'
+# Remote MCP servers, by name. They never get a credential.
+# MCP_SERVERS = '{"docs":"https://mcp.example.com/mcp"}'
+# Credentials tools may use, and the only hosts each may go to. The value is the
+# CREDENTIAL_<NAME> secret. The Zernio key only goes to zernio.com. Image uploads
+# go to the presigned R2 links Zernio hands out, which get the request without it.
+CREDENTIAL_HOSTS = '{"zernio":{"hosts":["zernio.com"],"uploads":["*.r2.cloudflarestorage.com"]}}'
+# Accounts admins can connect by saying "connect github". Needs PUBLIC_URL (this
+# Worker's URL; the OAuth app's callback is PUBLIC_URL/oauth/callback) and the
+# OAUTH_<NAME>_CLIENT_ID and OAUTH_<NAME>_CLIENT_SECRET secrets.
+# OAUTH_PROVIDERS = '{"github":{"scopes":"read:user"}}'
+# PUBLIC_URL = "https://social-media.<your subdomain>.workers.dev"
+
+[ai]
+binding = "AI"
+# Workers AI always runs on Cloudflare, even in wrangler dev, and is billed.
+remote = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "social-media"            # wrangler d1 create social-media --location oc
+database_id = "<d1 id>"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "<kv id>"
+
+[[queues.producers]]
+binding = "JOBS"
+queue = "social-media-jobs"               # wrangler queues create social-media-jobs
+
+[[queues.consumers]]
+queue = "social-media-jobs"
+max_batch_size = 1
+max_batch_timeout = 0
+# One job at a time, so two messages in one thread can't both rewrite the conversation.
+max_concurrency = 1
+max_retries = 0
+
+# Secrets (wrangler secret put <NAME> --config wrangler.toml):
+#   ALLOWED_USERS, ADMIN_USERS, SLACK_TEAM_ID (see .dev.vars.example)
+#   SLACK_SIGNING_SECRET, SLACK_BOT_TOKEN
+#   KEYRING      {"current":"k1","keys":{"k1":"<32 random bytes, base64>"}}
+#   SIGNING_KEY  at least 32 random characters
+#   CREDENTIAL_ZERNIO  a Zernio API key (sk_...)
+#   OAUTH_<NAME>_CLIENT_ID, OAUTH_<NAME>_CLIENT_SECRET for each OAUTH_PROVIDERS entry
