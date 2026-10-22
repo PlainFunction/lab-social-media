@@ -13,7 +13,11 @@ export interface HttpClientOptions {
   fetch?: Fetch
   /** Open a client span per call when telemetry is active. Default true; the OTLP exporter turns it off. */
   traced?: boolean
+  /** Also plain http to this machine (an allowed localhost, 127.0.0.1 or [::1]). Only the OTLP exporter sets it, for a collector in dev. */
+  loopbackHttp?: boolean
 }
+
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 /**
  * Outbound HTTP with an allowlist. Each adapter gets its own client that can
@@ -27,6 +31,7 @@ export class HttpClient {
   readonly #timeoutMs: number
   readonly #fetch: Fetch
   readonly #traced: boolean
+  readonly #loopbackHttp: boolean
 
   constructor(opts: HttpClientOptions) {
     this.service = opts.service
@@ -34,10 +39,12 @@ export class HttpClient {
     this.#timeoutMs = opts.timeoutMs ?? 15_000
     this.#fetch = opts.fetch ?? ((input, init) => fetch(input, init))
     this.#traced = opts.traced ?? true
+    this.#loopbackHttp = opts.loopbackHttp ?? false
   }
 
   allows(url: URL): boolean {
-    if (url.protocol !== 'https:') return false
+    const local = this.#loopbackHttp && url.protocol === 'http:' && LOOPBACK.has(url.hostname)
+    if (url.protocol !== 'https:' && !local) return false
     return this.allow.some(rule => rule.startsWith('*.') ? url.hostname.endsWith(rule.slice(1)) : url.hostname === rule)
   }
 

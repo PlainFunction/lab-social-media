@@ -14,9 +14,18 @@ preview_urls = false
 [observability]
 enabled = true
 
+# Traces to Tempo and logs to Loki: add OTLP destinations for each in the
+# Cloudflare dashboard (Workers Observability), then name them below. Or set
+# OTEL_EXPORTER_OTLP_ENDPOINT, and the secret OTEL_EXPORTER_OTLP_HEADERS, and
+# the Worker exports both itself.
+[observability.traces]
+enabled = true
+# destinations = ["grafana-tempo"]
+
 [observability.logs]
 enabled = true
 invocation_logs = true
+# destinations = ["grafana-loki"]
 
 [triggers]
 # Hourly: expire unanswered forms and old OAuth links, forget conversations older than 30 days.

@@ -244,13 +244,15 @@ export class OtlpTelemetry extends RecordingTelemetry {
   readonly #endpoint: URL
   readonly #headers?: SecretRef
   readonly #http: HttpClient
+  /** Paths whose last export failed, so a broken exporter says so once, not on every request. */
+  readonly #failing = new Set<string>()
 
   constructor(opts: { resource: TelemetryResource; endpoint: string; headers?: SecretRef; fetch?: Fetch }) {
     super(opts.resource)
     this.#endpoint = new URL(opts.endpoint.replace(/\/+$/, ''))
     this.#headers = opts.headers
-    // Untraced: the exporter must not report on itself.
-    this.#http = new HttpClient({ service: 'OTLP', allow: [this.#endpoint.hostname], fetch: opts.fetch, traced: false })
+    // Untraced: the exporter must not report on itself. Plain http only to a collector on this machine.
+    this.#http = new HttpClient({ service: 'OTLP', allow: [this.#endpoint.hostname], fetch: opts.fetch, traced: false, loopbackHttp: true })
   }
 
   async flush() {
@@ -295,14 +297,21 @@ export class OtlpTelemetry extends RecordingTelemetry {
   }
 
   async #post(path: string, headers: Record<string, string>, body: unknown) {
+    const url = `${this.#endpoint.origin}${this.#endpoint.pathname.replace(/\/$/, '')}${path}`
     try {
-      const base = `${this.#endpoint.origin}${this.#endpoint.pathname.replace(/\/$/, '')}`
-      const res = await this.#http.request(`${base}${path}`, { method: 'POST', headers, body: JSON.stringify(body) })
-      // Telemetry must never break the app; say so once in Workers Logs and move on.
-      if (!res.ok) console.error(JSON.stringify({ level: 'error', message: 'otlp.export.failed', path, status: res.status }))
+      const res = await this.#http.request(url, { method: 'POST', headers, body: JSON.stringify(body) })
+      if (res.ok) this.#failing.delete(path)
+      else this.#failed(path, url, { status: res.status })
     } catch (err) {
-      console.error(JSON.stringify({ level: 'error', message: 'otlp.export.failed', path, error: err instanceof Error ? err.name : 'Error' }))
+      this.#failed(path, url, { error: err instanceof Error ? err.name : 'Error', reason: err instanceof Error ? String(scrub(err.message)).slice(0, 200) : undefined })
     }
+  }
+
+  // Telemetry must never break the app: say what wasn't sent, once per isolate until it works again, and move on.
+  #failed(path: string, url: string, why: Record<string, unknown>) {
+    if (this.#failing.has(path)) return
+    this.#failing.add(path)
+    console.error(JSON.stringify({ level: 'error', message: 'otlp.export.failed', detail: `${path === '/v1/traces' ? 'Traces' : 'Logs'} weren't sent to ${url}`, path, ...why }))
   }
 
   describe(): Manifest {
