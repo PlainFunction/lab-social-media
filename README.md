@@ -135,7 +135,8 @@ against a fake Zernio behind the real credential broker.
    an API key.
 2. Create the Slack app from `slack-manifest.json` (api.slack.com/apps,
    Create New App, From a manifest), with `YOUR-HOST` swapped for your
-   Worker's URL. Start the Worker first: Slack checks the events URL when it
+   Worker's custom domain (uncomment `routes` in `wrangler.toml` with it;
+   workers.dev is off, so that's the only address Slack can reach). Start the Worker first: Slack checks the events URL when it
    saves. Then install it to the workspace.
 3. `wrangler d1 create social-media --location oc`, `wrangler kv namespace create social-media`,
    `wrangler queues create social-media-jobs`, and put the ids in `wrangler.toml`.
@@ -146,6 +147,23 @@ against a fake Zernio behind the real credential broker.
    `.dev.vars.example` has the formats. For `wrangler dev`, `npm run dev:secrets`
    writes `.dev.vars` with a new `KEYRING` and `SIGNING_KEY` and blank lines for
    the rest. For the deployed one, `wrangler secret put <NAME> --config wrangler.toml`.
+
+## Switching it off
+
+An admin says `settings` in a DM and pauses it. While it's paused it answers
+nothing but settings, and forms already waiting can't be sent. Unpause it the
+same way. If Slack itself is the problem, `wrangler delete --config wrangler.toml`
+removes the Worker and nothing else answers Slack's events.
+
+## If a key leaks
+
+Pause it first, then replace the one that leaked:
+
+- **`SLACK_BOT_TOKEN`**: on api.slack.com/apps, under OAuth & Permissions, revoke tokens and reinstall the app, then put the new one.
+- **`SLACK_SIGNING_SECRET`**: regenerate it under Basic Information, then put it.
+- **`KEYRING`**: add a new key to the JSON, point `current` at it, and `wrangler secret put KEYRING --config wrangler.toml`. New data is sealed with the new key and old data still opens. Conversations sealed before then stay under the old key until they're pruned (30 days), so drop the old key after that.
+- **`SIGNING_KEY`**: a new random one. Links already sent (OAuth connections in progress) stop working.
+- **`CREDENTIAL_ZERNIO`**: delete the key in Zernio, make a new one and put it. It only ever goes to zernio.com, so it can post to the connected Instagram and nothing else.
 
 ## Tested, and not yet tested
 

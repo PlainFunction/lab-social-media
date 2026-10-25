@@ -79,7 +79,12 @@ export class McpToolServer extends ToolServer {
     this.#specs ??= (async () => {
       await this.#rpc('initialize', { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: 'slack-agent', version: '0.1.0' } })
       const { tools } = await this.#rpc<{ tools: ToolSpec[] }>('tools/list', {})
-      return tools.filter(t => NAME.test(t.name))
+      const named = tools.filter(t => NAME.test(t.name))
+      // A remote server saying a tool only reads is its word, not ours: if the model is
+      // talked into calling it, the arguments still leave. So its tools ask unless an admin
+      // allows them. Hints that make us more careful (destructive, once per turn) stay.
+      if ('binding' in this.#endpoint) return named
+      return named.map(t => t.annotations?.readOnlyHint ? { ...t, annotations: { ...t.annotations, readOnlyHint: false } } : t)
     })().catch(err => { this.#specs = undefined; throw err })
     return this.#specs
   }

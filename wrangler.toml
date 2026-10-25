@@ -8,7 +8,10 @@ compatibility_flags = ["nodejs_compat"]
 
 # Slack posts to /slack/events and /slack/interactions on this Worker. Every
 # request is checked against the signing secret; nothing else answers.
-workers_dev = true
+# One address only: the custom domain below (Slack signs every request, so no
+# Access in front). No workers.dev, so there is no second way in that nobody watches.
+workers_dev = false
+# routes = [{ pattern = "social-media.example.com", custom_domain = true }]
 preview_urls = false
 
 [observability]
@@ -65,7 +68,7 @@ CREDENTIAL_HOSTS = '{"zernio":{"hosts":["zernio.com"],"uploads":["*.r2.cloudflar
 # Worker's URL; the OAuth app's callback is PUBLIC_URL/oauth/callback) and the
 # OAUTH_<NAME>_CLIENT_ID and OAUTH_<NAME>_CLIENT_SECRET secrets.
 # OAUTH_PROVIDERS = '{"github":{"scopes":"read:user"}}'
-# PUBLIC_URL = "https://social-media.<your subdomain>.workers.dev"
+# PUBLIC_URL = "https://social-media.example.com"
 
 [ai]
 binding = "AI"
